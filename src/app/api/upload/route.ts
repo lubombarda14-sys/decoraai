@@ -1,9 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import Replicate from "replicate";
-
-const replicate = new Replicate({
-  auth: process.env.REPLICATE_API_TOKEN,
-});
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,11 +12,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Upload to Replicate's file hosting for a real HTTP URL
-    const fileUrl = await replicate.files.create(file);
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+    const base64 = buffer.toString("base64");
+    const mimeType = file.type || "image/jpeg";
+    const dataUrl = `data:${mimeType};base64,${base64}`;
 
     return NextResponse.json({
-      url: fileUrl.urls.get,
+      url: dataUrl,
       fileName: file.name,
     });
   } catch (error) {

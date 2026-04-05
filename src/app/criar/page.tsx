@@ -30,7 +30,6 @@ export default function CriarPage() {
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState("");
   const [results, setResults] = useState<RenderResult[]>([]);
-  const [uploadedUrl, setUploadedUrl] = useState<string | null>(null);
 
   const canGenerate = file && style && room && !loading;
 
@@ -39,38 +38,22 @@ export default function CriarPage() {
 
     setLoading(true);
     setResults([]);
-    setProgress("Enviando imagem...");
+    setProgress("Enviando imagem e gerando renders (pode levar ate 60s)...");
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const uploadRes = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-      const uploadData = await uploadRes.json();
-
-      if (!uploadRes.ok) {
-        throw new Error(uploadData.error || "Erro no upload");
-      }
-
-      setUploadedUrl(uploadData.url);
-
       const styleConfig = DESIGN_STYLES.find((s) => s.id === style);
       const roomConfig = ROOM_TYPES.find((r) => r.id === room);
       const prompt = `${styleConfig?.prompt || style}, ${roomConfig?.label.toLowerCase() || room}`;
 
-      setProgress("Gerando renders com 3 modelos de IA (pode levar ate 60s)...");
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("prompt", prompt);
+      formData.append("mode", mode);
+      formData.append("strength", String(strength / 100));
 
       const renderRes = await fetch("/api/render", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          imageUrl: uploadData.url,
-          prompt,
-          mode,
-          strength: strength / 100,
-        }),
+        body: formData,
       });
       const renderData = await renderRes.json();
 
@@ -92,7 +75,6 @@ export default function CriarPage() {
 
   const handleReset = () => {
     setResults([]);
-    setUploadedUrl(null);
   };
 
   const handleFullReset = () => {
@@ -103,7 +85,6 @@ export default function CriarPage() {
     setMode("redesign");
     setStrength(65);
     setResults([]);
-    setUploadedUrl(null);
     setProgress("");
   };
 

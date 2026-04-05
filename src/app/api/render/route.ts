@@ -5,23 +5,33 @@ export const maxDuration = 300;
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { imageUrl, prompt, mode, strength } = body;
+    const formData = await request.formData();
+    const file = formData.get("file") as File | null;
+    const prompt = formData.get("prompt") as string;
+    const mode = (formData.get("mode") as string) || "redesign";
+    const strength = parseFloat((formData.get("strength") as string) || "0.65");
 
-    console.log("Render request:", { imageUrl: imageUrl?.substring(0, 80), prompt, mode, strength });
+    console.log("Render request:", { hasFile: !!file, prompt, mode, strength });
 
-    if (!imageUrl || !prompt) {
+    if (!file || !prompt) {
       return NextResponse.json(
-        { error: "imageUrl e prompt sao obrigatorios" },
+        { error: "file e prompt sao obrigatorios" },
         { status: 400 }
       );
     }
 
+    // Convert file to data URL for Replicate
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+    const base64 = buffer.toString("base64");
+    const mimeType = file.type || "image/jpeg";
+    const imageUrl = `data:${mimeType};base64,${base64}`;
+
     const results = await generateRenders({
       imageUrl,
       prompt,
-      mode: mode || "redesign",
-      strength: strength || 0.65,
+      mode: mode as "redesign" | "fill-empty",
+      strength,
     });
 
     console.log("Render results:", results.length, "models succeeded");
