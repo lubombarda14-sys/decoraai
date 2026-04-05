@@ -125,12 +125,16 @@ export async function generateRenders(
     });
   }
 
-  // Run all models in parallel
-  const results = await Promise.allSettled(
-    models.map((m) => runModel(m.id, m.name, m.input))
-  );
+  // Run models sequentially to avoid rate limiting on new accounts
+  const results: RenderResult[] = [];
+  for (const m of models) {
+    const result = await runModel(m.id, m.name, m.input);
+    if (result) results.push(result);
+    // Small delay between requests to respect rate limits
+    if (models.indexOf(m) < models.length - 1) {
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
+  }
 
-  return results
-    .map((r) => (r.status === "fulfilled" ? r.value : null))
-    .filter((r): r is RenderResult => r !== null);
+  return results;
 }
